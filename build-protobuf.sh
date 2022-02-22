@@ -5,13 +5,6 @@ echo Building Google Protobuf for Mac OS X / iOS.
 echo Use 'tail -f build.log' to monitor progress.
 echo "$(tput sgr0)"
 
-# Controls which architectures are build/included in the
-# universal binaries and libraries this script produces.
-# Set each to '1' to include, '0' to exclude.
-BUILD_X86_64_IOS_SIM=1
-BUILD_ARM64_IOS_SIM=1
-BUILD_ARM64_IPHONE=1
-
 # Set this to the minimum iOS SDK version you wish to support.
 MIN_SDK_VERSION=11.0
 
@@ -20,7 +13,7 @@ MIN_SDK_VERSION=11.0
 PREFIX=`pwd`/out
 mkdir -p ${PREFIX}/platform
 
-EXTRA_MAKE_FLAGS="protobuf-lite -j8"
+EXTRA_MAKE_FLAGS="-j8"
 
 XCODEDIR=`xcode-select --print-path`
 
@@ -34,7 +27,7 @@ IPHONESIMULATOR_PLATFORM=$(xcrun --sdk iphonesimulator --show-sdk-platform-path)
 IPHONESIMULATOR_SYSROOT=$(xcrun --sdk iphonesimulator --show-sdk-path)
 
 CC=clang
-CFLAGS="-DNDEBUG -Os -pipe -fPIC -fno-exceptions"
+CFLAGS="-DNDEBUG -DGOOGLE_PROTOBUF_RUNTIME_INCLUDE_BASE=\\\"libprotobuf-lite/\\\" -Os -pipe -fPIC -fno-exceptions"
 CXX=clang
 CXXFLAGS="${CFLAGS} -std=c++11 -stdlib=libc++"
 LDFLAGS="-stdlib=libc++"
@@ -54,13 +47,13 @@ echo "$(tput sgr0)"
         rm -rf ${PREFIX}
     fi
     mkdir ${PREFIX}
-    mkdir ${PREFIX}/platform
+    mkdir ${LIBDIR}
 )
 
 echo "$(tput setaf 2)"
-echo "##########################################"
-echo " Fetch Google Protobuf $PB_VERSION from source."
-echo "##########################################"
+echo "######################"
+echo " Generate Build files"
+echo "######################"
 echo "$(tput sgr0)"
 
 ./autogen.sh
@@ -70,14 +63,13 @@ then
   exit 1
 fi
 
-if [ $BUILD_X86_64_IOS_SIM -eq 1 ]
-then
-
 echo "$(tput setaf 2)"
-echo "###########################"
-echo " x86_64 for iPhone Simulator"
-echo "###########################"
+echo "#####################"
+echo " x86_64 for Mac OS X"
+echo "#####################"
 echo "$(tput sgr0)"
+
+ARCH_PREFIX=x86_64
 
 (
     make distclean
@@ -85,9 +77,39 @@ echo "$(tput sgr0)"
     --host=x86_64-apple-${OSX_VERSION} \
     --disable-shared \
     --enable-cross-compile \
-    --with-protoc="${PROTOC_PATH}" \
-    --prefix=${LIBDIR}/iossim_x86_64 \
-    --exec-prefix=${LIBDIR}/iossim_x86_64 \
+    --prefix=${LIBDIR}/${ARCH_PREFIX} \
+    --exec-prefix=${LIBDIR}/${ARCH_PREFIX} \
+    "CC=${CC}" \
+    "CFLAGS=${CFLAGS} \
+    -arch x86_64" \
+    "CXX=${CXX}" \
+    "CXXFLAGS=${CXXFLAGS} \
+    -arch x86_64" \
+    "LDFLAGS=-arch x86_64 \
+    ${LDFLAGS}" \
+    "LIBS=${LIBS}"
+    make ${EXTRA_MAKE_FLAGS}
+    make ${EXTRA_MAKE_FLAGS} install
+)
+
+X86_64_MAC_PROTOC=${ARCH_PREFIX}/bin/protoc
+
+echo "$(tput setaf 2)"
+echo "#############################"
+echo " x86_64 for iPhone Simulator"
+echo "#############################"
+echo "$(tput sgr0)"
+
+ARCH_PREFIX=iossim_x86_64
+
+(
+    make distclean
+    ./configure \
+    --host=x86_64-apple-${OSX_VERSION} \
+    --disable-shared \
+    --enable-cross-compile \
+    --prefix=${LIBDIR}/${ARCH_PREFIX} \
+    --exec-prefix=${LIBDIR}/${ARCH_PREFIX} \
     "CFLAGS=${CFLAGS} \
     -mios-simulator-version-min=${MIN_SDK_VERSION} \
     -arch x86_64 \
@@ -108,24 +130,15 @@ echo "$(tput sgr0)"
     make ${EXTRA_MAKE_FLAGS} install
 )
 
-X86_64_IOS_SIM_PROTOBUF=iossim_x86_64/lib/libprotobuf.a
-X86_64_IOS_SIM_PROTOBUF_LITE=iossim_x86_64/lib/libprotobuf-lite.a
-
-else
-
-X86_64_IOS_SIM_PROTOBUF=
-X86_64_IOS_SIM_PROTOBUF_LITE=
-
-fi
-
-if [ $BUILD_ARM64_IOS_SIM -eq 1 ]
-then
+X86_64_IOS_SIM_PROTOBUF=${ARCH_PREFIX}/lib/libprotobuf-lite.a
 
 echo "$(tput setaf 2)"
-echo "###########################"
-echo " x86_64 for iPhone Simulator"
-echo "###########################"
+echo "############################"
+echo " arm64 for iPhone Simulator"
+echo "############################"
 echo "$(tput sgr0)"
+
+ARCH_PREFIX=iossim_arm64
 
 (
     make distclean
@@ -133,9 +146,8 @@ echo "$(tput sgr0)"
     --host=arm \
     --disable-shared \
     --enable-cross-compile \
-    --with-protoc="${PROTOC_PATH}" \
-    --prefix=${LIBDIR}/iossim_arm64 \
-    --exec-prefix=${LIBDIR}/iossim_arm64 \
+    --prefix=${LIBDIR}/${ARCH_PREFIX} \
+    --exec-prefix=${LIBDIR}/${ARCH_PREFIX} \
     "CFLAGS=${CFLAGS} \
     -mios-simulator-version-min=${MIN_SDK_VERSION} \
     -arch arm64 \
@@ -156,18 +168,7 @@ echo "$(tput sgr0)"
     make ${EXTRA_MAKE_FLAGS} install
 )
 
-ARM64_IOS_SIM_PROTOBUF=iossim_arm64/lib/libprotobuf.a
-ARM64_IOS_SIM_PROTOBUF_LITE=iossim_arm64/lib/libprotobuf-lite.a
-
-else
-
-ARM64_IOS_SIM_PROTOBUF=
-ARM64_IOS_SIM_PROTOBUF_LITE=
-
-fi
-
-if [ $BUILD_ARM64_IPHONE -eq 1 ]
-then
+ARM64_IOS_SIM_PROTOBUF=${ARCH_PREFIX}/lib/libprotobuf-lite.a
 
 echo "$(tput setaf 2)"
 echo "##################"
@@ -175,14 +176,15 @@ echo " arm64 for iPhone"
 echo "##################"
 echo "$(tput sgr0)"
 
+ARCH_PREFIX=ios_arm64
+
 (
     make distclean
     ./configure \
     --host=arm \
-    --with-protoc="${PROTOC_PATH}" \
     --disable-shared \
-    --prefix=${LIBDIR}/ios_arm64 \
-    --exec-prefix=${LIBDIR}/ios_arm64 \
+    --prefix=${LIBDIR}/${ARCH_PREFIX} \
+    --exec-prefix=${LIBDIR}/${ARCH_PREFIX} \
     "CFLAGS=${CFLAGS} \
     -miphoneos-version-min=${MIN_SDK_VERSION} \
     -arch arm64 \
@@ -198,47 +200,97 @@ echo "$(tput sgr0)"
     make ${EXTRA_MAKE_FLAGS}
     make ${EXTRA_MAKE_FLAGS} install
 )
+(
+    cd ${LIBDIR}
 
-ARM64_IPHONE_PROTOBUF=ios_arm64/lib/libprotobuf.a
-ARM64_IPHONE_PROTOBUF_LITE=ios_arm64/lib/libprotobuf-lite.a
+    mkdir -p ${ARCH_PREFIX}/libprotobuf-lite.framework/Headers
+    cp ${ARCH_PREFIX}/lib/libprotobuf-lite.a ${ARCH_PREFIX}/libprotobuf-lite.framework/libprotobuf-lite
+    find ${ARCH_PREFIX}/include/ -type f -print0 | xargs -0 sed -i '' 's/include <google/include <libprotobuf-lite\/google/g'
+    cp -R ${ARCH_PREFIX}/include/ ${ARCH_PREFIX}/libprotobuf-lite.framework/Headers
+)
 
-else
-
-ARM64_IPHONE_PROTOBUF=
-ARM64_IPHONE_PROTOBUF_LITE=
-
-fi
+ARM64_IPHONE_LIBPROTOBUF_FLAGS="-framework ${ARCH_PREFIX}/libprotobuf-lite.framework"
 
 echo "$(tput setaf 2)"
-echo "############################"
-echo " Create Universal Libraries"
-echo "############################"
+echo "#####################"
+echo " Objective C for iOS"
+echo "#####################"
+echo "$(tput sgr0)"
+
+ARCH_PREFIX=ios_arm64
+
+xcodebuild archive \
+  -destination "generic/platform=iOS" \
+  -project "objectivec/ProtocolBuffers_iOS.xcodeproj" \
+  -configuration Release \
+  -scheme "ProtocolBuffers" \
+  -archivePath ${LIBDIR}/${ARCH_PREFIX}/ProtocolBuffers.xcarchive \
+  BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+  SKIP_INSTALL=NO \
+  ARCHS="arm64" \
+  MACH_O_TYPE=staticlib
+
+mkdir -p ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Headers
+cp ${LIBDIR}/${ARCH_PREFIX}/ProtocolBuffers.xcarchive/Products/usr/local/lib/libProtocolBuffers.a ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Protobuf
+cp objectivec/*.h ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Headers
+
+ARM64_IPHONE_PROTOBUF_FLAGS="-framework ${ARCH_PREFIX}/Protobuf.framework"
+
+echo "$(tput setaf 2)"
+echo "###############################"
+echo " Objective C for iOS Simulator"
+echo "###############################"
+echo "$(tput sgr0)"
+
+ARCH_PREFIX=simulator
+
+xcodebuild archive \
+  -destination "generic/platform=iOS Simulator" \
+  -project "objectivec/ProtocolBuffers_iOS.xcodeproj" \
+  -configuration Release \
+  -scheme "ProtocolBuffers" \
+  -archivePath ${LIBDIR}/${ARCH_PREFIX}/ProtocolBuffers.xcarchive \
+  BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+  SKIP_INSTALL=NO \
+  ARCHS="arm64 x86_64" \
+  MACH_O_TYPE=staticlib
+
+mkdir -p ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Headers
+cp ${LIBDIR}/${ARCH_PREFIX}/ProtocolBuffers.xcarchive/Products/usr/local/lib/libProtocolBuffers.a ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Protobuf
+cp objectivec/*.h ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Headers
+
+UNIVERSAL_IOS_SIM_PROTOBUF_FLAGS="-framework ${ARCH_PREFIX}/Protobuf.framework"
+
+echo "$(tput setaf 2)"
+echo "######################################"
+echo " Create Universal Simulator Framework"
+echo "######################################"
 echo "$(tput sgr0)"
 
 (
     cd ${PREFIX}/platform
-    mkdir universal
+    mkdir -p simulator/libprotobuf-lite.framework/Headers
 
-    # lipo ${ARM64_IPHONE_PROTOBUF} ${X86_64_IOS_SIM_PROTOBUF} -create -output universal/libprotobuf.a
-
-    # lipo ${ARM64_IPHONE_PROTOBUF_LITE} ${X86_64_IOS_SIM_PROTOBUF_LITE} -create -output universal/libprotobuf-lite.a
+    lipo ${ARM64_IOS_SIM_PROTOBUF} ${X86_64_IOS_SIM_PROTOBUF} -create -output simulator/libprotobuf-lite.framework/libprotobuf-lite
+    find iossim_x86_64/include/ -type f -print0 | xargs -0 sed -i '' 's/include <google/include <libprotobuf-lite\/google/g'
+    cp -R iossim_x86_64/include/ simulator/libprotobuf-lite.framework/Headers
 )
 
+UNIVERSAL_IOS_SIM_LIBPROTOBUF_FLAGS="-framework simulator/libprotobuf-lite.framework"
+
 echo "$(tput setaf 2)"
-echo "########################"
-echo " Finalize the packaging"
-echo "########################"
+echo "####################"
+echo " Create XCFrameworks"
+echo "####################"
 echo "$(tput sgr0)"
 
 (
-    cd ${PREFIX}
-    mkdir bin
-    mkdir lib
-    cp -r platform/x86_64/bin/protoc bin
-    cp -r platform/universal/* lib
+    cd ${PREFIX}/platform
+    mkdir -p ${PREFIX}/binaries/bin
 
-    file lib/libprotobuf.a
-    file lib/libprotobuf-lite.a
+    xcodebuild -create-xcframework ${ARM64_IPHONE_LIBPROTOBUF_FLAGS} ${UNIVERSAL_IOS_SIM_LIBPROTOBUF_FLAGS} -output ${PREFIX}/binaries/libprotobuf-lite.xcframework
+    xcodebuild -create-xcframework ${ARM64_IPHONE_PROTOBUF_FLAGS} ${UNIVERSAL_IOS_SIM_PROTOBUF_FLAGS} -output ${PREFIX}/binaries/Protobuf.xcframework
+    cp ${X86_64_MAC_PROTOC} ${PREFIX}/binaries/bin
 )
 
 ) 2>&1 | tee build.log
