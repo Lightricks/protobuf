@@ -1,0 +1,23 @@
+name: Build Protobuf binaries
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build-ios:
+    runs-on: macos-11
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: brew install automake
+    - name: Build Release
+      run: ./build-protobuf.sh
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ios_binaries
+        path: out/binaries
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ios_build_data
+        path: out/platform
