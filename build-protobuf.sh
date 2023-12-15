@@ -228,7 +228,9 @@ xcodebuild archive \
   BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
   SKIP_INSTALL=NO \
   ARCHS="arm64" \
-  MACH_O_TYPE=staticlib
+  MACH_O_TYPE=staticlib \
+  CLANG_WARN_STRICT_PROTOTYPES=NO \
+  IPHONEOS_DEPLOYMENT_TARGET=15.0
 
 mkdir -p ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Headers
 cp ${LIBDIR}/${ARCH_PREFIX}/ProtocolBuffers.xcarchive/Products/usr/local/lib/libProtocolBuffers.a ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Protobuf
@@ -253,7 +255,9 @@ xcodebuild archive \
   BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
   SKIP_INSTALL=NO \
   ARCHS="arm64 x86_64" \
-  MACH_O_TYPE=staticlib
+  MACH_O_TYPE=staticlib \
+  CLANG_WARN_STRICT_PROTOTYPES=NO \
+  IPHONEOS_DEPLOYMENT_TARGET=15.0
 
 mkdir -p ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Headers
 cp ${LIBDIR}/${ARCH_PREFIX}/ProtocolBuffers.xcarchive/Products/usr/local/lib/libProtocolBuffers.a ${LIBDIR}/${ARCH_PREFIX}/Protobuf.framework/Protobuf
