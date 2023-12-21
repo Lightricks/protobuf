@@ -27,7 +27,7 @@ IPHONESIMULATOR_PLATFORM=$(xcrun --sdk iphonesimulator --show-sdk-platform-path)
 IPHONESIMULATOR_SYSROOT=$(xcrun --sdk iphonesimulator --show-sdk-path)
 
 CC=clang
-CFLAGS="-DNDEBUG -DGOOGLE_PROTOBUF_RUNTIME_INCLUDE_BASE=\\\"libprotobuf-lite/\\\" -Os -pipe -fPIC -fno-exceptions"
+CFLAGS="-DNDEBUG -DGOOGLE_PROTOBUF_RUNTIME_INCLUDE_BASE=\\\"libprotobuf-lite/\\\" -Os -pipe -fPIC -fno-exceptions -fvisibility-inlines-hidden -fvisibility=hidden"
 CXX=clang
 CXXFLAGS="${CFLAGS} -std=c++11 -stdlib=libc++"
 LDFLAGS="-stdlib=libc++"
